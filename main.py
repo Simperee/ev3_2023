@@ -13,51 +13,65 @@ gyro = GyroSensor(Port.S1)
 color_sensor = ColorSensor(Port.S2)
 
 # Initialize the drive base.
-robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
+# robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
 
 gyro.reset_angle(0)
 
-kp = 1.0 #proportional constant
-speed = 50
+# line follow variables
+target_value = 0
+kp = 1.0
+kd = 0.0
+prev_error = 0
+
+# 
+speed = 50 # normal straight line speed
 
 
-def calibrateColorSensor():
-
+def calibrateTargetValue():
     min = 100
     max = 0
+    sum_min = 0
+    sum_max = 0
 
     left_motor.run(50)
     right_motor.run(-50)
 
-    for i in range(5000):
-        reading = color_sensor.reflection()
+    for i in range(3):
+        for j in range(5000):
+            reading = color_sensor.reflection()
 
-        if reading < min:
-            min = reading
-        elif reading > max:
-            max = reading
-        
+            if reading < min:
+                min = reading
+            elif reading > max:
+                max = reading
+        sum_min += min
+        sum_max += max
+    
+    avg_min = sum_min / 3
+    avg_max = sum_max / 3
+
     left_motor.stop()
     right_motor.stop()
 
-    return (max + min) / 2
+    target_value = (avg_min + avg_max) / 2
 
 
-def followLine():
+def followLine(): # makes robot steer to follow the line
+    sensor_value = color_sensor.reflection()
 
-    sensorValue = color_sensor.reflection()
+    error = target_value - sensor_value
 
-    error = targetValue - sensorValue
+    derivative = error - prev_error
 
-    steeringValue = error * kp
+    steering_value = error * kp + derivative * kd
 
-    left_motor.run(speed + steeringValue)
-    right_motor.run(speed - steeringValue)
+    left_motor.run(speed + steering_value)
+    right_motor.run(speed - steering_value)
 
-    #wait(1)
+    prev_error = error
 
 
-targetValue = calibrateColorSensor()
+calibrateTargetValue()
 
 while True:
     followLine()
