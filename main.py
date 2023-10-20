@@ -34,14 +34,13 @@ def init_arm():
     lower_arm()
     arm_motor.reset_angle(0)
 
-def calibrate_target_value():
+def calibrateTargetValue():
     min = 100
     max = 0
     sum_min = 0
     sum_max = 0
-
-    left_motor.run(80)
-    right_motor.run(80)
+    left_motor.run(50)
+    right_motor.run(-50)
 
     for i in range(3):
         for j in range(5000):
@@ -56,7 +55,6 @@ def calibrate_target_value():
     
     avg_min = sum_min / 3
     avg_max = sum_max / 3
-
     left_motor.stop()
     right_motor.stop()
 
@@ -72,12 +70,10 @@ def follow_line(): # makes robot turn to follow the line
     integral += error
 
     steering_value = error * KP + derivative * KD + integral * KI
-
     left_motor.run(SPEED+steering_value)
     right_motor.run(SPEED-steering_value)
 
     prev_error = error
-
 
     arm_motor.run_target(100,-100)
 
@@ -92,7 +88,7 @@ def pickup_cube(): # TO IMPROVE
     right_motor.run_until_stalled(200, Stop.COAST, 20)
 
     wait(100)
-
+    
     raise_arm()
 
     wait(100)
