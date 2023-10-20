@@ -1,6 +1,6 @@
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import Motor, GyroSensor, ColorSensor
-from pybricks.parameters import Port, Stop
+from pybricks.parameters import Button, Port, Stop
 from pybricks.tools import StopWatch, wait
 #from pybricks.robotics import DriveBase
 
@@ -14,7 +14,7 @@ gyro = GyroSensor(Port.S1)
 gyro.reset_angle(0)
 color_sensor = ColorSensor(Port.S2)
 arm_motor = Motor()
-arm_motor.control.limits(None,120,None)
+arm_motor.control.limits(None,150,None)
 
 # Initialize the drive base.
 #robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
