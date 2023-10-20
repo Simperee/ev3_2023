@@ -1,14 +1,5 @@
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import Motor, GyroSensor, ColorSensor
-from pybricks.parameters import Port
-from pybricks.robotics import DriveBase
-
-# Initialize the EV3 Brick.
-ev3 = EV3Brick()
-
-# Initialize the motors.
-from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import Motor, GyroSensor, ColorSensor
 from pybricks.parameters import Port, Stop
 from pybricks.tools import StopWatch, wait
 #from pybricks.robotics import DriveBase
@@ -29,7 +20,7 @@ arm_motor.control.limits(None,120,None)
 #robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
 
 # line follow variables
-target_value = 0
+target_value = 50
 KP = 1.0
 KD = 0.0
 KI = 0.0
@@ -111,11 +102,20 @@ def pickup_cube(): # TO IMPROVE
 
 
 
-# line follow test program
-calibrate_target_value()
-wait(3000)
-stopwatch = StopWatch()
-while stopwatch.time < 10000:
-    follow_line()
-left_motor.stop()
-right_motor.stop()
+# test program
+while True:
+
+    while not any(ev3.buttons.pressed()):
+        wait(10)
+    
+    if Button.CENTER in ev3.buttons.pressed():
+        stopwatch = StopWatch()
+
+        while stopwatch.time < 10000:
+            follow_line()
+
+        left_motor.stop()
+        right_motor.stop()
+
+    elif Button.UP in ev3.buttons.pressed():
+        calibrate_target_value()
