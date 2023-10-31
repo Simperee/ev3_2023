@@ -35,6 +35,8 @@ def init_arm():
     arm_motor.reset_angle(0)
 
 def calibrateTargetValue():
+    global target_value
+
     min = 100
     max = 0
     sum_min = 0
@@ -61,6 +63,8 @@ def calibrateTargetValue():
     target_value = (avg_min + avg_max) / 2
 
 def follow_line(): # makes robot turn to follow the line
+    global prev_error, integral
+
     sensor_value = color_sensor.reflection()
 
     error = target_value - sensor_value
@@ -97,7 +101,6 @@ def pickup_cube(): # TO IMPROVE
     
 
 
-
 # test program
 while True:
 
@@ -115,3 +118,4 @@ while True:
 
     elif Button.UP in ev3.buttons.pressed():
         calibrate_target_value()
+
