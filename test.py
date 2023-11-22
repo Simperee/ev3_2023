@@ -1,89 +1,165 @@
 #!/usr/bin/env pybricks-micropython
 from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import Motor, ColorSensor
-from pybricks.parameters import Port
-#from pybricks.robotics import DriveBase
+from pybricks.ev3devices import Motor, GyroSensor, ColorSensor
+from pybricks.parameters import Button, Port, Stop
+from pybricks.tools import StopWatch, wait
+
+# from pybricks.robotics import DriveBase
 
 # Initialize the EV3 Brick.
 ev3 = EV3Brick()
 
 # Initialize the components.
-left_motor = Motor(Port.B)
-right_motor = Motor(Port.C)
-# gyro = GyroSensor(Port.S1)
-# gyro.reset_angle(0)
-color_sensor = ColorSensor(Port.S4)
-# arm_motor = Motor()
-# arm_motor.control.limits(None,150,None)
+left_motor = Motor(Port.A)
+left_motor.control.limits(None, 400, None)
+right_motor = Motor(Port.D)
+right_motor.control.limits(None, 400, None)
+arm_motor = Motor(Port.C)
+arm_motor.control.limits(None, 250, None)
+gyro = GyroSensor(Port.S2)
+gyro.reset_angle(0)
+color_sensor = ColorSensor(Port.S3)
 
 # Initialize the drive base.
-#robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
+# robot = DriveBase(left_motor, right_motor, wheel_diameter=68.8, axle_track=127)
 
 # line follow variables
-max_value = 100
+sensor_value = 0
 target_value = 50
-KP = 1.5
-KD = 0.5
-KI = 0.0
-prev_error = 0
-integral = 0
+min_value = 100
+KP = 1.0
 
-SPEED = 150 # normal straight line speed
+SPEED = 200  # normal speed
+MIN_TOLERANCE = 6
 
-def calibrateTargetValue():
-    global target_value, max_value
+
+def init_arm():
+    lower_arm()
+    arm_motor.reset_angle(0)
+
+def calibrate_sensor_values():
+    global target_value, min_value
 
     min = 100
     max = 0
-    sum_min = 0
-    sum_max = 0
     left_motor.run(150)
     right_motor.run(-150)
 
-    for i in range(3):
-        for j in range(5000):
-            reading = color_sensor.reflection()
+    for j in range(15000):
+        reading = color_sensor.reflection()
+        if reading < min:
+            min = reading
+        elif reading > max:
+            max = reading
 
-            if reading < min:
-                min = reading
-            elif reading > max:
-                max = reading
-        sum_min += min
-        sum_max += max
-    
-    avg_min = sum_min / 3
-    avg_max = sum_max / 3
-    max_value = avg_max
+    target_value = (max + min) / 2
+
+    min_value = max
+
     left_motor.stop()
     right_motor.stop()
 
-    target_value = (avg_min + avg_max) / 2
 
-def follow_line(): # makes robot turn to follow the line
-     global prev_error, integral
+def follow_line():  # makes robot turn to follow the line
+    global sensor_value
 
-     sensor_value = color_sensor.reflection()
+    sensor_value = color_sensor.reflection()
 
-     if sensor_value > max_value - 4.0:
-         left_motor.run(-150)
-         right_motor.run(150)
-         return
+    error = target_value - sensor_value
 
-     error = target_value - sensor_value
+    steering_value = error * KP
 
-     derivative = error - prev_error
+    left_motor.run(SPEED + steering_value)
+    right_motor.run(SPEED - steering_value)
 
-     integral += error
+def raise_arm():
+    arm_motor.run_angle(180, Stop.HOLD, 100, True)
 
-     steering_value = error * KP + derivative * KD + integral * KI
-     left_motor.run(SPEED+steering_value)
-     right_motor.run(SPEED-steering_value)
-
-#     prev_error = error
-    
+def lower_arm():
+    arm_motor.run_until_stalled(220, Stop.COAST, 30)  # DUTY LIMIT TO CHANGE
 
 
-# test program
-calibrateTargetValue()
+def pick_up_cube(): # TO IMPROVE
+    global sensor_value
+    left_motor.run_until_stalled(280, Stop.BRAKE, 25)
+    right_motor.run_until_stalled(280, Stop.BRAKE, 25)
+    raise_arm()
+
+    wait(200)
+
+    left_motor.run_angle(-100, -10, Stop.HOLD, False)
+    right_motor_motor.run_angle(-100, -10, Stop.HOLD, False)
+    lower_arm()
+
+    wait(300)
+
+    left_motor.run(150)
+    right_motor.run(-150)
+    gyro.reset_angle(0)
+    while sensor_value > min_value + MIN_TOLERANCE and gyro.angle() < 140:
+        sensor_value = color_sensor.reflection()
+        wait(5)
+    left_motor.stop()
+    right_motor.stop()
+
+
+def turn_right():
+    global sensor_value
+    gyro.reset_angle(0)
+    left_motor.run(SPEED)
+    right_motor.hold()
+    while gyro.angle() < 80 and sensor_value > min_value + MIN_TOLERANCE:
+        sensor_value = color_sensor.reflection()
+        wait(5)
+    left_motor.stop()
+    right_motor.stop()
+
+def turn_left(): # probably won't work
+    global sensor_value
+    gyro.reset_angle(0)
+    left_motor.hold()
+    right_motor.run(SPEED)
+    while gyro.angle() < 50 and sensor_value > min_value + MIN_TOLERANCE:
+        sensor_value = color_sensor.reflection()
+        wait(5)
+    left_motor.stop()
+    right_motor.stop()
+
+
+#path = ['s','s','s','s','sc','s','s','rc','e'] # red cubes
+path = ['s','r','l','s','e'] # test
+
 while True:
-    follow_line()
+
+    while not any(ev3.buttons.pressed()):
+        wait(10)
+
+    if Button.UP in ev3.buttons.pressed():
+        init_arm()
+        while True:
+            follow_line()
+            if sensor_value < min_value + MIN_TOLERANCE:  # detect intersection
+                instruction = path.pop(0)
+                if instruction[0] == 's': # continue straight
+                    print('fat')
+                elif instruction[0] == 'r': # turn right
+                    turn_right()
+                elif instruction[0] == 'l': # turn left
+                    turn_left()
+                elif instruction == 'e': # end
+                    left_motor.brake()
+                    right_motor.brake()
+                    wait(100)
+                    ev3.speaker.beep(500,6000)
+
+                if len(instruction) > 1:
+                    time = StopWatch()
+                    time.reset()
+                    while time.time() < 800:
+                        follow_line()
+                    if instruction[1] == 'c': # pick up cube
+                        pick_up_cube()
+
+
+    elif Button.DOWN in ev3.buttons.pressed():
+        calibrate_sensor_values()
